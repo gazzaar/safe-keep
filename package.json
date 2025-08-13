@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "tsx src/cli.ts"
   },
   "repository": {
     "type": "git",
@@ -15,6 +15,7 @@
   "bugs": {
     "url": "https://github.com/gazzaar/safe-keep/issues"
   },
+  "type": "module",
   "homepage": "https://github.com/gazzaar/safe-keep#readme",
   "description": "A cross-DB CLI tool to back up, compress, and store databases locally or in the cloud — safely and on schedule.",
   "devDependencies": {
@@ -22,13 +23,14 @@
     "@stylistic/eslint-plugin": "^5.2.3",
     "@types/eslint__js": "^8.42.3",
     "eslint": "^9.33.0",
-    "ts-node-dev": "^2.0.0",
+    "tsx": "^4.20.4",
     "typescript": "^5.9.2",
     "typescript-eslint": "^8.39.1"
   },
   "dependencies": {
+    "@inquirer/prompts": "^7.8.1",
     "@types/inquirer": "^9.0.9",
     "commander": "^14.0.0",
-    "inquirer": "^12.9.1"
+    "pg": "^8.16.3"
   }
 }
