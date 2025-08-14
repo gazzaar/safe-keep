@@ -1,3 +1,4 @@
+import fs from 'fs';
 import { input, password, select } from '@inquirer/prompts';
 import { ConfigType, DBConfig, DBType, Operations } from './types';
 import { pgBackup } from './databases/postgresql';
@@ -22,6 +23,12 @@ async function selectOperation(): Promise<Operations | undefined> {
 }
 
 async function getBackupConfig(): Promise<ConfigType | undefined> {
+  const defaultPorts = {
+    pg: '5432',
+    MySql: '3306',
+    mongodb: '27017',
+  };
+
   try {
     const dbType: DBType = await select({
       message: 'Enter database type',
@@ -47,67 +54,85 @@ async function getBackupConfig(): Promise<ConfigType | undefined> {
       ],
     });
 
-    const dbUser = await input({
-      message: 'Enter database user ',
-      required: true,
-      validate: (value: string) => {
-        if (value.trim() === '') {
-          return '⚠️ User must be not empty!';
-        }
-        return true;
-      },
-    });
+    if (dbType === 'sqlite') {
+      const dbPath = await input({
+        message: 'Database file path:',
+        validate: (value) => {
+          if (!value.trim()) return 'Database path is required';
 
-    const dbHost = await input({
-      message: 'Enter hostname (default: localhost)',
-      default: 'localhost',
-      required: true,
-      validate: (value: string) => {
-        if (value.trim() === '') {
-          return '⚠️ Hostname must be not empty!';
-        }
-        return true;
-      },
-    });
+          // TODO: Use Path later
+          if (!fs.existsSync(value.trim())) {
+            return `File does not exist: ${value}`;
+          }
 
-    const dbPort = await input({
-      message: 'Enter port number: (default 5432)',
-      default: '5432',
-      required: true,
-      validate: (value) => {
-        const port = parseInt(value.trim(), 10);
+          return true;
+        },
+      });
 
-        if (isNaN(port) || port < 1 || port > 65535) {
-          return `⚠️ port must be a number between 1 and 65535`;
-        }
+      return { dbType, dbPath };
+    } else {
+      const dbUser = await input({
+        message: 'Enter database user ',
+        required: true,
+        validate: (value: string) => {
+          if (value.trim() === '') {
+            return '⚠️ User must be not empty!';
+          }
+          return true;
+        },
+      });
 
-        return true;
-      },
-    });
+      const dbHost = await input({
+        message: 'Enter hostname (default: localhost)',
+        default: 'localhost',
+        required: true,
+        validate: (value: string) => {
+          if (value.trim() === '') {
+            return '⚠️ Hostname must be not empty!';
+          }
+          return true;
+        },
+      });
 
-    const dbPassword = await password({
-      message: 'Enter your Database password:',
-      mask: true,
-      // validate: (value) => {
-      //   if (value.trim().length <= 4) {
-      //     return 'password must be more than 4 chcaracters';
-      //   }
-      //   return true;
-      // },
-    });
+      const dbPort = await input({
+        message: `Enter port number: (default ${defaultPorts[dbType]})`,
+        default: defaultPorts[dbType],
+        required: true,
+        validate: (value) => {
+          const port = parseInt(value.trim(), 10);
 
-    const dbName = await input({
-      message: 'Enter your database name:',
-      required: true,
-      validate: (value) => {
-        if (value.trim() === '') {
-          return '⚠️ Database name must be not empty!';
-        }
-        return true;
-      },
-    });
+          if (isNaN(port) || port < 1 || port > 65535) {
+            return `⚠️ port must be a number between 1 and 65535`;
+          }
 
-    return { dbType, dbHost, dbPort: +dbPort, dbPassword, dbName, dbUser };
+          return true;
+        },
+      });
+
+      const dbPassword = await password({
+        message: 'Enter your Database password:',
+        mask: true,
+        // validate: (value) => {
+        //   if (value.trim().length <= 4) {
+        //     return 'password must be more than 4 chcaracters';
+        //   }
+        //   return true;
+        // },
+      });
+
+      const dbName = await input({
+        message: 'Enter your database name:',
+        required: true,
+        validate: (value) => {
+          if (value.trim() === '') {
+            return '⚠️ Database name must be not empty!';
+          }
+          return true;
+        },
+      });
+
+      return { dbType, dbHost, dbPort: +dbPort, dbPassword, dbName, dbUser };
+    }
   } catch (err) {
     if (err instanceof Error) {
       if (err.name === 'ExitPromptError') {

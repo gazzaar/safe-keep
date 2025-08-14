@@ -1,7 +1,7 @@
 export type DBType = 'pg' | 'MySql' | 'mongodb' | 'sqlite';
 export type Operations = 'backup' | 'restore';
 
-export interface ConfigType {
+export interface NetworkDBConfig {
   dbType: DBType;
   dbHost: string;
   dbPort: number;
@@ -10,4 +10,13 @@ export interface ConfigType {
   dbUser: string;
 }
 
-export type DBConfig = Omit<ConfigType, 'dbType'>;
+export interface SqliteDBConfig {
+  dbType: 'sqlite';
+  dbPath: string;
+}
+
+export type ConfigType = NetworkDBConfig | SqliteDBConfig;
+
+export type DBConfig =
+  | Omit<NetworkDBConfig, 'dbType'>
+  | Omit<SqliteDBConfig, 'dbType'>;
