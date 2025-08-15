@@ -15,8 +15,4 @@ export interface SqliteDBConfig {
   dbPath: string;
 }
 
-export type ConfigType = NetworkDBConfig | SqliteDBConfig;
-
-export type DBConfig =
-  | Omit<NetworkDBConfig, 'dbType'>
-  | Omit<SqliteDBConfig, 'dbType'>;
+export type DatabaseConfig = NetworkDBConfig | SqliteDBConfig;
