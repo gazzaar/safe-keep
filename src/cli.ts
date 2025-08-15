@@ -1,7 +1,7 @@
 import fs from 'fs';
 import { input, password, select } from '@inquirer/prompts';
-import { ConfigType, DBConfig, DBType, Operations } from './types';
-import { pgBackup } from './databases/postgresql';
+import { DatabaseConfig, DBType, Operations } from './types';
+import { backup } from './databases/backup';
 
 async function selectOperation(): Promise<Operations | undefined> {
   try {
@@ -22,7 +22,7 @@ async function selectOperation(): Promise<Operations | undefined> {
   return undefined;
 }
 
-async function getBackupConfig(): Promise<ConfigType | undefined> {
+async function getBackupConfig(): Promise<DatabaseConfig | undefined> {
   const defaultPorts = {
     pg: '5432',
     MySql: '3306',
@@ -149,7 +149,9 @@ async function start() {
   const operation = await selectOperation();
   if (operation === 'backup') {
     const config = await getBackupConfig();
-    await pgBackup(config as DBConfig);
+    if (config) {
+      await backup(config);
+    }
   }
 }
 start();
