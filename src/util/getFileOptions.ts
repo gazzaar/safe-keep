@@ -84,8 +84,12 @@ function ensureDirectory(dirPath: string): string {
 
   try {
     if (!fs.existsSync(dirPath)) {
+      const parentDir = path.dirname(dirPath);
+      fs.accessSync(parentDir, fs.constants.W_OK);
       fs.mkdirSync(dirPath, { recursive: true });
     }
+
+    fs.accessSync(dirPath, fs.constants.W_OK);
     return dirPath;
   } catch (err) {
     if (err instanceof Error) {
