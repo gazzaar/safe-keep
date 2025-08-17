@@ -1,14 +1,15 @@
 import { DatabaseConfig } from '../types';
+import { mysqlConnect } from './mysql/mysqlConnect';
 import { pgConnect } from './postgresql/pgConnect';
 
-export async function backup(config: DatabaseConfig) {
+export async function handleDBType(config: DatabaseConfig) {
   switch (config.dbType) {
     case 'pg':
       await pgConnect(config);
       break;
 
     case 'MySql':
-      // TODO: MySql function here
+      await mysqlConnect(config);
       break;
 
     case 'mongodb':

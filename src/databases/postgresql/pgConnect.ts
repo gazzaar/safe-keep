@@ -1,23 +1,15 @@
+import { execSync } from 'child_process';
 import { Client } from 'pg';
 import { NetworkDBConfig } from '../../types';
+import { backup } from '../../util/backupStreams';
 import {
   areVersionsCompatible,
   extractOperationVersion,
   extractPostgreSQLVersion,
 } from '../../util/getVersions';
-import { spawn, execSync } from 'child_process';
-import { backupPg } from './../postgresql/pgBackup';
 
 export async function pgConnect(args: NetworkDBConfig) {
-  const {
-    dbHost,
-    dbPort,
-    dbPassword,
-    dbName,
-    dbUser,
-    backupFileFormat,
-    backupFilePath,
-  } = args;
+  const { dbHost, dbPassword, dbPort, dbName, dbUser } = args;
   const client = new Client({
     user: dbUser,
     host: dbHost,
@@ -39,18 +31,7 @@ export async function pgConnect(args: NetworkDBConfig) {
       );
     }
 
-    // BUG: password
-    const backUpOptions = {
-      dbUser,
-      dbHost,
-      dbName,
-      backupFileFormat,
-      backupFilePath,
-      dbPassword,
-      dbPort,
-    };
-
-    await backupPg(backUpOptions);
+    await backup(args);
   } catch (err) {
     if (err instanceof Error) {
       console.error('⚠️ Error:', err.message);
