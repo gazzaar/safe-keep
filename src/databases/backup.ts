@@ -1,5 +1,5 @@
 import { DatabaseConfig } from '../types';
-import { pgConnect } from './postgresql';
+import { pgConnect } from './postgresql/pgConnect';
 
 export async function backup(config: DatabaseConfig) {
   switch (config.dbType) {

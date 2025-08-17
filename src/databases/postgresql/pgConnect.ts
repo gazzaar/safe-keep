@@ -1,11 +1,12 @@
 import { Client } from 'pg';
-import { NetworkDBConfig } from '../types';
+import { NetworkDBConfig } from '../../types';
 import {
   areVersionsCompatible,
   extractOperationVersion,
   extractPostgreSQLVersion,
-} from '../util/getVersions';
+} from '../../util/getVersions';
 import { spawn, execSync } from 'child_process';
+import { backupPg } from './../postgresql/pgBackup';
 
 export async function pgConnect(args: NetworkDBConfig) {
   const {
@@ -27,7 +28,7 @@ export async function pgConnect(args: NetworkDBConfig) {
 
   try {
     await client.connect();
-    console.log('✨connected successfuly');
+    console.log('✨ Connected successfuly');
     const { rows } = await client.query('SELECT version();');
     const dbVersion = extractPostgreSQLVersion(rows[0].version);
     const pgDump = execSync('pg_dump --version', { encoding: 'utf8' });
@@ -37,13 +38,24 @@ export async function pgConnect(args: NetworkDBConfig) {
         `Versions missmatch: Database: ${dbVersion}, pg_dump: ${pgDumpVersion}`,
       );
     }
-    // TODO: perfom backup here
+
+    // BUG: password
+    const backUpOptions = {
+      dbUser,
+      dbHost,
+      dbName,
+      backupFileFormat,
+      backupFilePath,
+      dbPassword,
+      dbPort,
+    };
+
+    await backupPg(backUpOptions);
   } catch (err) {
     if (err instanceof Error) {
       console.error('⚠️ Error:', err.message);
     }
   } finally {
-    await client.end();
-    console.log('Finished');
+    client.end();
   }
 }
