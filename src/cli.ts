@@ -2,11 +2,12 @@ import fs from 'fs';
 import { input, password, select } from '@inquirer/prompts';
 import { DatabaseConfig, DBType, Operations } from './types';
 import { backup } from './databases/backup';
+import { getFileOptions } from './util/getFileOptions';
 
 async function selectOperation(): Promise<Operations | undefined> {
   try {
     const operation: Operations = await select({
-      message: 'Enter operation type',
+      message: 'Select operation type',
       choices: [
         { name: 'Backup', value: 'backup' },
         { name: 'Restore', value: 'restore' },
@@ -31,7 +32,7 @@ async function getBackupConfig(): Promise<DatabaseConfig | undefined> {
 
   try {
     const dbType: DBType = await select({
-      message: 'Enter database type',
+      message: 'Select database type',
       choices: [
         {
           name: 'PostgreSQL',
@@ -69,7 +70,9 @@ async function getBackupConfig(): Promise<DatabaseConfig | undefined> {
         },
       });
 
-      return { dbType, dbPath };
+      const { backupFileFormat, resolvedBackupFilePath: backupFilePath } =
+        await getFileOptions();
+      return { dbType, dbPath, backupFileFormat, backupFilePath };
     } else {
       const dbUser = await input({
         message: 'Enter database user ',
@@ -131,7 +134,19 @@ async function getBackupConfig(): Promise<DatabaseConfig | undefined> {
         },
       });
 
-      return { dbType, dbHost, dbPort: +dbPort, dbPassword, dbName, dbUser };
+      const { backupFileFormat, resolvedBackupFilePath: backupFilePath } =
+        await getFileOptions();
+
+      return {
+        dbType,
+        dbHost,
+        dbPort: +dbPort,
+        dbPassword,
+        dbName,
+        dbUser,
+        backupFilePath,
+        backupFileFormat,
+      };
     }
   } catch (err) {
     if (err instanceof Error) {
