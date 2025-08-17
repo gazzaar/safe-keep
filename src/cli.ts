@@ -1,8 +1,8 @@
 import fs from 'fs';
 import { input, password, select } from '@inquirer/prompts';
 import { DatabaseConfig, DBType, Operations } from './types';
-import { backup } from './databases/backup';
-import { getFileOptions } from './util/getFileOptions';
+import { handleDBType } from './databases/handleDBType';
+import { createBackupFilePath } from './util/getFileOptions';
 
 async function selectOperation(): Promise<Operations | undefined> {
   try {
@@ -56,6 +56,7 @@ async function getBackupConfig(): Promise<DatabaseConfig | undefined> {
     });
 
     if (dbType === 'sqlite') {
+      throw new Error('sqlite not implement yet');
       const dbPath = await input({
         message: 'Database file path:',
         validate: (value) => {
@@ -70,9 +71,8 @@ async function getBackupConfig(): Promise<DatabaseConfig | undefined> {
         },
       });
 
-      const { backupFileFormat, resolvedBackupFilePath: backupFilePath } =
-        await getFileOptions();
-      return { dbType, dbPath, backupFileFormat, backupFilePath };
+      // TODO: implement sqlite
+      return undefined;
     } else {
       const dbUser = await input({
         message: 'Enter database user ',
@@ -115,12 +115,12 @@ async function getBackupConfig(): Promise<DatabaseConfig | undefined> {
       const dbPassword = await password({
         message: 'Enter your Database password:',
         mask: true,
-        // validate: (value) => {
-        //   if (value.trim().length <= 4) {
-        //     return 'password must be more than 4 chcaracters';
-        //   }
-        //   return true;
-        // },
+        validate: (value) => {
+          if (value.trim().length <= 2) {
+            return 'password must be more than 4 chcaracters';
+          }
+          return true;
+        },
       });
 
       const dbName = await input({
@@ -134,8 +134,7 @@ async function getBackupConfig(): Promise<DatabaseConfig | undefined> {
         },
       });
 
-      const { backupFileFormat, resolvedBackupFilePath: backupFilePath } =
-        await getFileOptions();
+      const backupFilePath = (await createBackupFilePath(dbName)) as string;
 
       return {
         dbType,
@@ -145,7 +144,6 @@ async function getBackupConfig(): Promise<DatabaseConfig | undefined> {
         dbName,
         dbUser,
         backupFilePath,
-        backupFileFormat,
       };
     }
   } catch (err) {
@@ -165,7 +163,7 @@ async function start() {
   if (operation === 'backup') {
     const config = await getBackupConfig();
     if (config) {
-      await backup(config);
+      await handleDBType(config);
     }
   }
 }

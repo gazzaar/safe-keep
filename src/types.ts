@@ -9,19 +9,12 @@ export interface NetworkDBConfig {
   dbName: string;
   dbUser: string;
   backupFilePath: string;
-  backupFileFormat: string;
 }
 
 export interface SqliteDBConfig {
   dbType: 'sqlite';
   dbPath: string;
   backupFilePath: string;
-  backupFileFormat: string;
 }
 
 export type DatabaseConfig = NetworkDBConfig | SqliteDBConfig;
-
-export interface FileOptions {
-  backupFileFormat: string;
-  resolvedBackupFilePath: string;
-}
