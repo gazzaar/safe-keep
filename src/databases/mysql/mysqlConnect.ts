@@ -27,7 +27,7 @@ export async function mysqlConnect(configs: NetworkDBConfig) {
     const mysqldumpVersion = extractOperationVersion(dumpVersion);
     if (!areVersionsCompatible(dbVersion, mysqldumpVersion)) {
       throw new Error(
-        `Versions missmatch: Database: ${dbVersion}, pg_dump: ${mysqldumpVersion}`,
+        `Versions missmatch: Database: ${dbVersion}, mysqldump: ${mysqldumpVersion}`,
       );
     }
 
