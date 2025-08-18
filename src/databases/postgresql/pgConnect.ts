@@ -7,9 +7,20 @@ import {
   extractOperationVersion,
   extractPostgreSQLVersion,
 } from '../../util/getVersions';
+import { restore } from '../../util/restoreStreams';
 
-export async function pgConnect(args: NetworkDBConfig) {
-  const { dbHost, dbPassword, dbPort, dbName, dbUser } = args;
+export async function pgConnect(
+  configs: NetworkDBConfig,
+  operationType: string,
+) {
+  let { dbHost, dbPassword, dbPort, dbName, dbUser } = configs;
+
+  const targetDBName = dbName;
+
+  if (operationType === 'restore') {
+    dbName = 'postgres';
+  }
+
   const client = new Client({
     user: dbUser,
     host: dbHost,
@@ -31,7 +42,20 @@ export async function pgConnect(args: NetworkDBConfig) {
       );
     }
 
-    await backup(args);
+    if (operationType === 'backup') {
+      await backup(configs);
+    }
+    if (operationType === 'restore') {
+      const SQL = `CREATE DATABASE ${targetDBName};`;
+      await client.query(SQL);
+
+      const restoreConfig = {
+        ...configs,
+        dbName: targetDBName,
+      };
+
+      await restore(restoreConfig);
+    }
   } catch (err) {
     if (err instanceof Error) {
       console.error('⚠️ Error:', err.message);

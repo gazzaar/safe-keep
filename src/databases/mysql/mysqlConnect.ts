@@ -6,10 +6,19 @@ import {
 } from '../../util/getVersions';
 import { NetworkDBConfig } from '../../types';
 import { backup } from '../../util/backupStreams';
+import { restore } from '../../util/restoreStreams';
 
-export async function mysqlConnect(configs: NetworkDBConfig) {
-  const { dbHost, dbPassword, dbPort, dbName, dbUser } = configs;
+export async function mysqlConnect(
+  configs: NetworkDBConfig,
+  operationType: string,
+) {
+  let { dbHost, dbPassword, dbPort, dbName, dbUser } = configs;
 
+  const targetDBName = dbName;
+
+  if (operationType === 'restore') {
+    dbName = 'mysql';
+  }
   const connection = await mysql.createConnection({
     host: dbHost,
     user: dbUser,
@@ -31,7 +40,21 @@ export async function mysqlConnect(configs: NetworkDBConfig) {
       );
     }
 
-    await backup(configs);
+    if (operationType === 'backup') {
+      await backup(configs);
+    }
+
+    if (operationType === 'restore') {
+      const SQL = `CREATE DATABASE ${targetDBName};`;
+      await connection.query(SQL);
+
+      const restoreConfig = {
+        ...configs,
+        dbName: targetDBName,
+      };
+
+      await restore(restoreConfig);
+    }
   } catch (error) {
     if (error instanceof Error) {
       console.error(error.message);
