@@ -2,9 +2,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 
-export async function createBackupFilePath(dbName: string): Promise<string> {
+export async function createBackupFilePath(
+  dbName: string,
+  dbType: string,
+): Promise<string> {
   const backupPath = expandTilde('~/BACKUP/');
-  const fileName = createFileName(dbName);
+  const fileName = createFileName(dbName, dbType);
   const fullPath = path.join(backupPath, fileName);
 
   // Ensure the directory exists
@@ -13,9 +16,9 @@ export async function createBackupFilePath(dbName: string): Promise<string> {
   return fullPath;
 }
 
-const createFileName = (dbName: string) => {
+const createFileName = (dbName: string, dbType: string) => {
   const date = new Date();
-  return `${dbName}-${date.toISOString().split('T')[0]}.sql.gz`;
+  return `${dbName}-${dbType}-${date.toISOString().split('T')[0]}.sql.gz`;
 };
 
 function expandTilde(inputPath: string): string {
