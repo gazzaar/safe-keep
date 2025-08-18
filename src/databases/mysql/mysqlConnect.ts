@@ -45,7 +45,7 @@ export async function mysqlConnect(
     }
 
     if (operationType === 'restore') {
-      const SQL = `CREATE DATABASE ${targetDBName};`;
+      const SQL = `CREATE DATABASE IF NOT EXISTS "${targetDBName}";`;
       await connection.query(SQL);
 
       const restoreConfig = {

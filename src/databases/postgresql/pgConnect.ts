@@ -46,14 +46,19 @@ export async function pgConnect(
       await backup(configs);
     }
     if (operationType === 'restore') {
-      const SQL = `CREATE DATABASE ${targetDBName};`;
-      await client.query(SQL);
-
+      const SQL = `CREATE DATABASE "${targetDBName}";`;
+      try {
+        await client.query(SQL);
+        console.log(`✨ Database "${targetDBName}" created successfully`);
+      } catch (err) {
+        if (!(err instanceof Error && (err as any).code === '42P04')) {
+          throw err;
+        }
+      }
       const restoreConfig = {
         ...configs,
         dbName: targetDBName,
       };
-
       await restore(restoreConfig);
     }
   } catch (err) {
@@ -61,6 +66,6 @@ export async function pgConnect(
       console.error('⚠️ Error:', err.message);
     }
   } finally {
-    client.end();
+    await client.end();
   }
 }
