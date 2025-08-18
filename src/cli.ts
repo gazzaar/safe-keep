@@ -1,8 +1,12 @@
 import fs from 'fs';
-import { input, password, select } from '@inquirer/prompts';
-import { DatabaseConfig, DBType, Operations } from './types';
+import os from 'os';
+import path from 'path';
+import { input, password, select, search } from '@inquirer/prompts';
+import { DatabaseConfig, DBType, NetworkDBConfig, Operations } from './types';
 import { handleDBType } from './databases/handleDBType';
 import { createBackupFilePath } from './util/getFileOptions';
+import { formatFileSize } from './util/formatFileSize';
+import { extractDbTypeFromFilename } from './util/extractDBType';
 
 async function selectOperation(): Promise<Operations | undefined> {
   try {
@@ -23,7 +27,9 @@ async function selectOperation(): Promise<Operations | undefined> {
   return undefined;
 }
 
-async function getBackupConfig(): Promise<DatabaseConfig | undefined> {
+async function getDBConnectionConfig(): Promise<
+  Omit<NetworkDBConfig, 'backupFilePath'> | undefined
+> {
   const defaultPorts = {
     pg: '5432',
     MySql: '3306',
@@ -55,24 +61,9 @@ async function getBackupConfig(): Promise<DatabaseConfig | undefined> {
       ],
     });
 
-    if (dbType === 'sqlite') {
-      throw new Error('sqlite not implement yet');
-      const dbPath = await input({
-        message: 'Database file path:',
-        validate: (value) => {
-          if (!value.trim()) return 'Database path is required';
-
-          // TODO: Use Path later
-          if (!fs.existsSync(value.trim())) {
-            return `File does not exist: ${value}`;
-          }
-
-          return true;
-        },
-      });
-
-      // TODO: implement sqlite
-      return undefined;
+    if (dbType === 'sqlite' || dbType === 'mongodb') {
+      // TODO: support other databases
+      throw new Error(`${dbType} is not supported yet`);
     } else {
       const dbUser = await input({
         message: 'Enter database user ',
@@ -134,8 +125,6 @@ async function getBackupConfig(): Promise<DatabaseConfig | undefined> {
         },
       });
 
-      const backupFilePath = (await createBackupFilePath(dbName)) as string;
-
       return {
         dbType,
         dbHost,
@@ -143,7 +132,6 @@ async function getBackupConfig(): Promise<DatabaseConfig | undefined> {
         dbPassword,
         dbName,
         dbUser,
-        backupFilePath,
       };
     }
   } catch (err) {
@@ -158,12 +146,147 @@ async function getBackupConfig(): Promise<DatabaseConfig | undefined> {
   return undefined;
 }
 
+async function getBackupConfig(): Promise<DatabaseConfig | undefined> {
+  try {
+    const dbConnectionConfig = await getDBConnectionConfig();
+    if (!dbConnectionConfig)
+      throw new Error('Database configuration is not correct');
+
+    const { dbType, dbName, dbPort, dbUser, dbPassword, dbHost } =
+      dbConnectionConfig;
+
+    const backupFilePath = (await createBackupFilePath(
+      dbName,
+      dbType,
+    )) as string;
+
+    return {
+      dbType,
+      dbHost,
+      dbPort,
+      dbPassword,
+      dbName,
+      dbUser,
+      backupFilePath,
+    };
+  } catch (err) {
+    if (err instanceof Error) {
+      if (err.name === 'ExitPromptError') {
+        console.log('Operation cancelled by user');
+        process.exit(0);
+      }
+      console.error(`⚠️ Error: ${err.message}`);
+    }
+  }
+  return undefined;
+}
+
+async function selectBackupFile(): Promise<DatabaseConfig | undefined> {
+  try {
+    const dbConnectionConfig = await getDBConnectionConfig();
+    if (!dbConnectionConfig)
+      throw new Error('Database configuration is not correct');
+
+    const { dbType, dbName, dbPort, dbUser, dbPassword, dbHost } =
+      dbConnectionConfig;
+    const backupDir = path.join(os.homedir(), 'BACKUP');
+
+    if (!fs.existsSync(backupDir)) {
+      throw new Error('No Backup Directory');
+    }
+
+    const backupFilePath = await search({
+      message: `Search for a ${dbType} backup file:`,
+      source: async (input) => {
+        const allFiles = fs
+          .readdirSync(backupDir)
+          .filter((file) => {
+            const fileDbType = extractDbTypeFromFilename(file);
+            return file.endsWith('.sql.gz') && fileDbType === dbType;
+          })
+          .map((file) => {
+            const fullPath = path.join(backupDir, file);
+            const stats = fs.statSync(fullPath);
+
+            const dbName = file.split('-')[0];
+            const dateStr = file.match(/(\d{4}-\d{2}-\d{2})/)?.[1] || 'unknown';
+
+            return {
+              name: `${file} (${formatFileSize(stats.size)})`,
+              value: fullPath,
+              description: `Database: ${dbName} | Created: ${stats.mtime.toLocaleString()}`,
+              searchableText: `${file} ${dbName} ${dateStr}`,
+            };
+          })
+          .sort(
+            (a, b) =>
+              fs.statSync(b.value).mtime.getTime() -
+              fs.statSync(a.value).mtime.getTime(),
+          );
+
+        if (allFiles.length === 0) {
+          return [
+            { name: 'No backup files found', value: null, disabled: true },
+          ];
+        }
+
+        if (!input) {
+          return allFiles.slice(0, 10);
+        }
+
+        const filtered = allFiles.filter((file) =>
+          file.searchableText.toLowerCase().includes(input.toLowerCase()),
+        );
+
+        if (filtered.length === 0) {
+          return [
+            {
+              name: `No backup files matching "${input}"`,
+              value: null,
+              disabled: true,
+            },
+          ];
+        }
+
+        return filtered;
+      },
+    });
+
+    if (!backupFilePath) throw new Error('No backup file found');
+
+    return {
+      dbType,
+      dbUser,
+      dbHost,
+      dbPassword,
+      dbPort,
+      dbName,
+      backupFilePath,
+    };
+  } catch (err) {
+    if (err instanceof Error)
+      if (err instanceof Error) {
+        if (err.name === 'ExitPromptError') {
+          console.log('Operation cancelled by user');
+          process.exit(0);
+        }
+        console.error(`⚠️ Error: ${err.message}`);
+      }
+  }
+  return undefined;
+}
+
 async function start() {
   const operation = await selectOperation();
   if (operation === 'backup') {
     const config = await getBackupConfig();
     if (config) {
-      await handleDBType(config);
+      await handleDBType(config, operation);
+    }
+  } else {
+    const config = await selectBackupFile();
+    if (config) {
+      await handleDBType(config, 'restore');
     }
   }
 }
