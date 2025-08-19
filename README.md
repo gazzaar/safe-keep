@@ -10,6 +10,14 @@ A simple, reliable CLI to back up and restore relational databases. It guides yo
 - **Safe defaults**: Standard naming and local `~/BACKUP` destination
 - **Version checks**: Validates client vs server version compatibility
 
+### Example
+
+- **Backup**
+  ![backup-example](./assets/backup.png)
+
+- **Restore**
+  ![restore-example](./assets/restore.png)
+
 ### Status
 
 - Supported: **PostgreSQL**, **MySQL** (full database backup/restore)
