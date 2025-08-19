@@ -13,9 +13,11 @@ A simple, reliable CLI to back up and restore relational databases. It guides yo
 ### Example
 
 - **Backup**
+
   ![backup-example](./assets/backup.png)
 
 - **Restore**
+
   ![restore-example](./assets/restore.png)
 
 ### Status
